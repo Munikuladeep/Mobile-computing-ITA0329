@@ -1,0 +1,105 @@
+import math
+
+def valid_cluster_sizes(limit=20):
+    sizes = set()
+
+    for i in range(10):
+        for j in range(10):
+            N = i**2 + i*j + j**2
+            if N >= 1:
+                sizes.add(N)
+
+    return sorted(sizes)[:limit]
+
+
+def reuse_metrics(N, S=336, M=21, n=4.0):
+    k = S // N
+    q = math.sqrt(3 * N)
+    capacity = M * k
+    si_db = 10 * math.log10((q ** n) / 6)
+
+    return k, capacity, q, si_db
+
+
+def display_results(S, M, n, req):
+    print("\nFREQUENCY REUSE AND CO-CHANNEL INTERFERENCE")
+    print("-" * 75)
+    print(f"Total Channels (S) = {S}")
+    print(f"Number of Cells (M) = {M}")
+    print(f"Path Loss Exponent (n) = {n}")
+    print(f"Required S/I = {req} dB")
+    print("-" * 75)
+
+    print(f"{'N':>4} {'D/R':>8} {'Ch/Cell':>10} "
+          f"{'Capacity':>12} {'S/I (dB)':>12} {'Meets?':>10}")
+
+    print("-" * 75)
+
+    best = None
+
+    for N in valid_cluster_sizes(10):
+        k, C, q, si = reuse_metrics(N, S, M, n)
+
+        status = "YES" if si >= req else "NO"
+
+        if si >= req and best is None:
+            best = N
+
+        print(f"{N:4d} {q:8.2f} {k:10d} "
+              f"{C:12d} {si:12.2f} {status:>10}")
+
+    print("-" * 75)
+
+    if best is not None:
+        print(f"Smallest Cluster Size = {best}")
+    else:
+        print("No cluster size meets the requirement.")
+
+    return best
+
+
+# Main Program
+
+S = 336
+M = 21
+n = 4.0
+req = 18.0
+
+# Case 1: Required S/I = 18 dB
+best_18 = display_results(S, M, n, req)
+
+# Case 2: Required S/I = 12 dB
+best_12 = display_results(S, M, n, 12.0)
+
+# Case 3: Required S/I = 9 dB
+best_9 = display_results(S, M, n, 9.0)
+
+# Case 4: Path Loss Exponent = 3
+best_n3 = display_results(S, M, 3.0, 18.0)
+
+# Case 5: Path Loss Exponent = 3.5
+best_n35 = display_results(S, M, 3.5, 18.0)
+
+# Final Comparison
+
+print("\nFINAL COMPARISON")
+print("-" * 50)
+print(f"{'Condition':<30} {'Best N':>10}")
+print("-" * 50)
+
+print(f"{'S/I = 18 dB, n = 4':<30} {str(best_18):>10}")
+print(f"{'S/I = 12 dB, n = 4':<30} {str(best_12):>10}")
+print(f"{'S/I = 9 dB, n = 4':<30} {str(best_9):>10}")
+print(f"{'S/I = 18 dB, n = 3':<30} {str(best_n3):>10}")
+print(f"{'S/I = 18 dB, n = 3.5':<30} {str(best_n35):>10}")
+
+print("-" * 50)
+
+print("\nCAPACITY AND INTERFERENCE TRADE-OFF")
+print("1. Smaller cluster size increases system capacity.")
+print("2. Smaller cluster size increases co-channel interference.")
+print("3. Larger cluster size improves S/I but reduces capacity.")
+print("4. Cell splitting can increase system capacity.")
+print("5. Sectoring reduces interference and improves capacity.")
+
+print("\nProgram executed successfully.")
