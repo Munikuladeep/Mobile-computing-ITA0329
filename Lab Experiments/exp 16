@@ -1,0 +1,116 @@
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+
+def fspl_db(d_km, f_mhz):
+    return 32.44 + 20 * math.log10(d_km) + 20 * math.log10(f_mhz)
+
+def rx_power_dbm(pt, gt, gr, d_km, f_mhz):
+    return pt + gt + gr - fspl_db(d_km, f_mhz)
+
+f = 2400.0
+pt = 20.0
+gt = 2.0
+gr = 2.0
+sens = -90.0
+
+distances = [0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10]
+
+print("FREE SPACE PATH LOSS AND RECEIVED POWER")
+print("-" * 65)
+print(f"Frequency = {f} MHz")
+print(f"Transmit Power = {pt} dBm")
+print(f"Transmitter Gain = {gt} dBi")
+print(f"Receiver Gain = {gr} dBi")
+print(f"Receiver Sensitivity = {sens} dBm")
+
+print("-" * 65)
+print(f"{'d (km)':>8} {'FSPL (dB)':>12} {'Pr (dBm)':>12} {'Pr (W)':>14} {'Link':>8}")
+print("-" * 65)
+
+for d in distances:
+    loss = fspl_db(d, f)
+    pr = rx_power_dbm(pt, gt, gr, d, f)
+    watts = 10 ** ((pr - 30) / 10)
+    status = "OK" if pr >= sens else "FAIL"
+
+    print(f"{d:8.2f} {loss:12.2f} {pr:12.2f} {watts:14.3e} {status:>8}")
+
+allowed_loss = pt + gt + gr - sens
+
+d_max = 10 ** (
+    (allowed_loss - 32.44 - 20 * math.log10(f)) / 20
+)
+
+print("-" * 65)
+print(f"Allowed Path Loss = {allowed_loss:.2f} dB")
+print(f"Maximum Range = {d_max:.2f} km")
+
+doubling_loss = fspl_db(2, f) - fspl_db(1, f)
+print(f"Loss due to doubling distance = {doubling_loss:.2f} dB")
+
+print("\nEFFECT OF FREQUENCY AT 1 KM")
+print("-" * 50)
+print(f"{'Frequency':>12} {'FSPL (dB)':>15} {'Pr (dBm)':>15}")
+print("-" * 50)
+
+frequencies = [900, 1800, 2400, 3500]
+
+for fm in frequencies:
+    loss = fspl_db(1, fm)
+    pr = rx_power_dbm(pt, gt, gr, 1, fm)
+    print(f"{fm:10d} MHz {loss:12.2f} {pr:15.2f}")
+
+print("\nVERIFICATION AT 1 KM AND 2400 MHz")
+print(f"FSPL = {fspl_db(1, 2400):.2f} dB")
+print(f"Received Power = {rx_power_dbm(pt, gt, gr, 1, 2400):.2f} dBm")
+
+print("\nMODIFIED LINK PARAMETERS")
+
+new_pt = 43.0
+new_gt = 15.0
+new_gr = 2.0
+new_sens = -100.0
+
+new_allowed_loss = new_pt + new_gt + new_gr - new_sens
+
+new_d_max = 10 ** (
+    (new_allowed_loss - 32.44 - 20 * math.log10(f)) / 20
+)
+
+print(f"Transmit Power = {new_pt} dBm")
+print(f"Transmitter Gain = {new_gt} dBi")
+print(f"Receiver Gain = {new_gr} dBi")
+print(f"Sensitivity = {new_sens} dBm")
+print(f"New Maximum Range = {new_d_max:.2f} km")
+
+# Plot received power versus distance
+
+d = np.logspace(-2, 1, 200)
+
+plt.figure(figsize=(10, 6))
+
+for fm in frequencies:
+    fspl = 32.44 + 20 * np.log10(d) + 20 * np.log10(fm)
+    received_power = pt + gt + gr - fspl
+    plt.plot(d, received_power, label=f"{fm} MHz")
+
+plt.axhline(
+    y=sens,
+    color="black",
+    linestyle="--",
+    label="Receiver Sensitivity"
+)
+
+plt.xscale("log")
+plt.xlabel("Distance (km)")
+plt.ylabel("Received Power (dBm)")
+plt.title("Free Space Path Loss - Received Power vs Distance")
+plt.legend()
+plt.grid(True, which="both", linestyle="--", alpha=0.5)
+plt.tight_layout()
+
+plt.savefig("fspl.png", dpi=150)
+plt.show()
+
+print("\nGraph saved successfully as fspl.png")
