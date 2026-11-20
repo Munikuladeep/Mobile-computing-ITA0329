@@ -1,0 +1,140 @@
+import matplotlib.pyplot as plt
+
+def erlang_b(E, C):
+    b = 1.0
+    for m in range(1, C + 1):
+        b = E * b / (m + E * b)
+    return b
+
+
+def channels_needed(E, gos):
+    C = 1
+    while erlang_b(E, C) > gos:
+        C += 1
+    return C
+
+
+def max_load(C, gos, hi=500.0):
+    lo = 0.0
+
+    for _ in range(60):
+        mid = (lo + hi) / 2
+
+        if erlang_b(mid, C) < gos:
+            lo = mid
+        else:
+            hi = mid
+
+    return lo
+
+
+# Main Program
+
+print("ERLANG B CALL BLOCKING PROBABILITY")
+print("-" * 60)
+
+loads = (2, 5, 10, 20)
+channels = (5, 10, 20, 30)
+
+print("\nBlocking Probability B(E, C)")
+print(f"{'C':>4}" + "".join(f"{'E=' + str(e):>10}" for e in loads))
+
+for C in channels:
+    print(f"{C:4d}" + "".join(
+        f"{erlang_b(e, C):10.4f}" for e in loads
+    ))
+
+
+# Offered Traffic Calculation
+
+users = 2000
+calls_per_hour = 1.5
+hold_s = 120
+
+E = users * calls_per_hour * hold_s / 3600
+
+print("\nOFFERED TRAFFIC")
+print("-" * 60)
+print(f"Number of Users = {users}")
+print(f"Calls per Hour = {calls_per_hour}")
+print(f"Average Call Duration = {hold_s} seconds")
+print(f"Offered Load = {E:.1f} erlang")
+
+
+# Channels Required for Different GOS
+
+print("\nCHANNELS REQUIRED FOR DIFFERENT GOS")
+print("-" * 60)
+
+for gos in (0.05, 0.02, 0.01):
+    required = channels_needed(E, gos)
+    print(f"GOS {gos:.0%}: Channels Needed = {required}")
+
+
+# Maximum Traffic Load
+
+print("\nMAXIMUM TRAFFIC LOAD")
+print("-" * 60)
+
+maximum = max_load(20, 0.02)
+
+print(f"Number of Channels = 20")
+print(f"Target GOS = 2%")
+print(f"Maximum Load = {maximum:.2f} erlang")
+
+
+# Verification
+
+print("\nVERIFICATION")
+print("-" * 60)
+
+print(f"B(5, 10) = {erlang_b(5, 10):.4f}")
+
+
+# Trunking Efficiency Comparison
+
+print("\nTRUNKING EFFICIENCY COMPARISON")
+print("-" * 60)
+
+total_load = 20
+
+blocking_30 = erlang_b(total_load, 30)
+blocking_10 = erlang_b(total_load / 3, 10)
+
+print(f"Total Offered Load = {total_load} erlang")
+print(f"One Group of 30 Channels: Blocking = {blocking_30:.4f}")
+print(f"Three Groups of 10 Channels: Blocking = {blocking_10:.4f}")
+
+print("\nTrunking Observation:")
+print("One group of 30 channels provides lower blocking.")
+print("Larger channel groups improve trunking efficiency.")
+
+
+# Plot Blocking Probability vs Offered Traffic
+
+traffic = [i * 0.5 for i in range(1, 61)]
+blocking = [erlang_b(e, 10) for e in traffic]
+
+plt.figure(figsize=(10, 6))
+
+plt.plot(
+    traffic,
+    blocking,
+    color="blue",
+    linewidth=2,
+    label="C = 10 Channels"
+)
+
+plt.xlabel("Offered Traffic (Erlang)")
+plt.ylabel("Blocking Probability")
+plt.title("Erlang B Blocking Probability vs Offered Traffic")
+
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.legend()
+plt.tight_layout()
+
+plt.savefig("erlangb.png", dpi=150)
+plt.show()
+
+print("\nGraph saved successfully as erlangb.png")
+print("Program executed successfully.")
