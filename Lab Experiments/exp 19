@@ -1,0 +1,57 @@
+
+import numpy as np
+
+D = 1000.0
+P0 = -30.0
+n = 3.5
+SIGMA = 4.0
+V = 10.0
+
+def run(H, rng, step=0.5):
+    serving = 0
+    handoffs = 0
+    pingpong = 0
+    last_t = -99
+    last_from = None
+    first_pos = None
+
+    for t in np.arange(0, D / V, step):
+        x = V * t
+
+        p = [
+            P0 - 10 * n * np.log10(max(abs(x - bx), 1))
+            + rng.normal(0, SIGMA)
+            for bx in (0, D)
+        ]
+
+        new = 1 - serving
+
+        if p[new] > p[serving] + H:
+            if last_from == new and t - last_t < 10:
+                pingpong += 1
+
+            handoffs += 1
+            last_from = serving
+            last_t = t
+            serving = new
+
+            if first_pos is None:
+                first_pos = x
+
+    return handoffs, pingpong, first_pos
+
+
+rng = np.random.default_rng(1)
+runs = 300
+
+print(f"{'H (dB)':>7} {'handoffs':>9} "
+      f"{'ping-pong':>10} {'1st handoff at (m)':>19}")
+
+for H in (0, 2, 4, 6, 8, 10):
+    res = [run(H, rng) for _ in range(runs)]
+
+    ho = np.mean([r[0] for r in res])
+    pp = np.mean([r[1] for r in res])
+    pos = np.mean([r[2] for r in res if r[2] is not None])
+
+    print(f"{H:7d} {ho:9.2f} {pp:10.2f} {pos:19.0f}")
